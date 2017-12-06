@@ -36,7 +36,6 @@ endif
 
 ifeq ($(TARGET_ARCH),x86_64)
 OBJECTS += $(TARGET_ARCH)/combine.o
-OBJECTS += $(TARGET_ARCH)/dft.o
 CFLAGS += -DASSEMBLY_FFT
 CFLAGS += -m64
 SFLAGS += -m64

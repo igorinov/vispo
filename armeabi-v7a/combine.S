@@ -1,6 +1,6 @@
 .global bit_reverse
-.global	fft_join_s
-.global	fft_join_d
+.global	fft_combine_s
+.global	fft_combine_d
 
 .text
 
@@ -10,15 +10,20 @@ bit_reverse:
 	ror	r0, r0, r1
 	bx	lr
 
-fft_join_s:
+//  R0 - complex exponent for this stage (w)
+//  R1 - signal data
+//  R2 - signal length, complex points (l)
+//  R3 - number of signal pairs to combine (m)
+
+fft_combine_s:
 	push	{ r5, r6, r7, r8 }
 
 	mov	r6, r1			//  data
-	add	r7, r6, r3, lsl #3	//  data + n
+	add	r7, r6, r2, lsl #3	//  data + l
 _next_signal_s:
 	mov	r8, r0			//  complex sinusoid lookup table
-	mov	r5, r3
-	tst	r5, #3			//  is N multiple of 4 ?
+	mov	r5, r2
+	tst	r5, #3			//  is L multiple of 4 ?
 	bne	_next_pair_s1
 
 # process 4 pairs (a, b) per iteration
@@ -98,24 +103,24 @@ _next_pair_s1:
 
 _end_signal_s:
 
-	add	r6, r6, r3, lsl #3	//  data += n
-	add	r7, r7, r3, lsl #3
+	add	r6, r6, r2, lsl #3	//  data += l
+	add	r7, r7, r2, lsl #3
 
-	sub	r2, r2, #1		//  signal counter
-	cmp	r2, #0
+	sub	r3, r3, #1		//  signal counter
+	cmp	r3, #0
 	bne	_next_signal_s
 
 	pop	{ r5, r6, r7, r8 }
 	bx	lr
 
-fft_join_d:
+fft_combine_d:
 	push	{ r5, r6, r7, r8 }
 
 	mov	r6, r1			//  data
-	add	r7, r6, r3, lsl #4	//  data + n
+	add	r7, r6, r2, lsl #4	//  data + l
 _next_signal_d:
 	mov	r8, r0			//  complex sinusoid lookup table
-	mov	r5, r3
+	mov	r5, r2
 _next_pair_d:
 	vldm	r8, { d4, d5 }		//  s[j]
 	vldm	r6, { d0, d1 }		//  a[j]
@@ -145,14 +150,15 @@ _next_pair_d:
 	cmp	r5, #0
 	bne	_next_pair_d
 
-	add	r6, r6, r3, lsl #4	//  data += n;
-	add	r7, r7, r3, lsl #4
+	add	r6, r6, r2, lsl #4	//  data += l;
+	add	r7, r7, r2, lsl #4
 
-	sub	r2, r2, #1		//  signal counter
-	cmp	r2, #0
+	sub	r3, r3, #1		//  signal counter
+	cmp	r3, #0
 	bne	_next_signal_d
 
 	pop	{ r5, r6, r7, r8 }
 	bx	lr
 
 	.size	fft_join_s, . - fft_join_s
+

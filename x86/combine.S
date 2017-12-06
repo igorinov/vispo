@@ -1,9 +1,14 @@
-.global	fft_join_s
-.global	fft_join_d
+.global	fft_combine_s
+.global	fft_combine_d
 
 .code32
 
-fft_join_s:
+#  EBP  +8: complex exponent for this stage (w)
+#  EBP +12: signal data
+#  EBP +16: signal length, complex points (l)
+#  EBP +20: number of signal pairs to combine (m)
+
+fft_combine_s:
 	push		%ebp
 	movl		%esp, %ebp
 	push		%ebx
@@ -12,11 +17,11 @@ fft_join_s:
 
 	movl		12 (%ebp), %ebx		#  data
 
-	movl		20 (%ebp), %eax		#  signal size in points
+	movl		16 (%ebp), %eax		#  signal size in points
 	shll		$3, %eax		#  signal size in bytes
 	movl		%eax, %edi
 
-	movl		16 (%ebp), %edx		#  M, number of signals
+	movl		20 (%ebp), %edx		#  M, number of signals
 
 _next_signal_s:
 	movl		8 (%ebp), %esi		#  complex sinusoid lookup table
@@ -28,7 +33,6 @@ _next_signal_s:
 	jnz		_next_pair_s1
 	test		$1, %ecx
 	jnz		_next_pair_s1
-	shrl		$1, %ecx
 
 _next_pair_s2:
 	movapd		(%esi), %xmm6		#  { s0, s1 }
@@ -52,7 +56,8 @@ _next_pair_s2:
 
 	addl		$16, %ebx		#  data += 2
 	addl		$16, %esi		#  p_s += 2
-	loop		_next_pair_s2
+	subl		$2, %ecx
+	jnz		_next_pair_s2
 
 	jmp		_end_signal_s
 
@@ -64,7 +69,7 @@ _next_pair_s1:
 	movlhps		%xmm6, %xmm6		#  XMM6 = { Re(s), Im(s), Re(s), Im(s) }
 	movaps		%xmm5, %xmm0
 	unpcklps	%xmm0, %xmm0		#  XMM0 = { Re(b), Re(b), Im(b), Im(b) }
-	mulps		%xmm6, %xmm0		#  Re(b) * Re(s), Re(b) * Im(s), Im(b)*Re(s), Im(b)*Im(s)
+	mulps		%xmm6, %xmm0		#  Re(b)·Re(s), Re(b)·Im(s), Im(b)·Re(s), Im(b)·Im(s)
 
 	movaps		%xmm0, %xmm1
 
@@ -81,12 +86,13 @@ _next_pair_s1:
 
 	addl		$8, %ebx		#  data += 1
 	addl		$8, %esi		#  p_s += 1
-	loop		_next_pair_s1
+	subl		$1, %ecx
+	jnz		_next_pair_s1
 
 _end_signal_s:
 	addl		%edi, %ebx		#  data += n
 
-	decl		%edx			#  signal counter
+	subl		$1, %edx		#  signal counter
 	jnz		_next_signal_s
 
 	emms
@@ -97,7 +103,7 @@ _end_signal_s:
 	pop		%ebp
 	ret
 
-fft_join_d:
+fft_combine_d:
 	push		%ebp
 	movl		%esp, %ebp
 	push		%ebx
@@ -106,16 +112,16 @@ fft_join_d:
 
 	movl		12 (%ebp), %ebx		#  data
 
-	movl		20 (%ebp), %eax		#  N, signal size in points
+	movl		16 (%ebp), %eax		#  L, signal size in points
 	shll		$4, %eax		#  signal size in bytes
 	movl		%eax, %edi
 
-	movl		16 (%ebp), %edx		#  M, number of signals
+	movl		20 (%ebp), %edx		#  M, number of signals
 
 _next_signal_d:
 	movl		8 (%ebp), %esi		#  complex sinusoid lookup table
 	movl		%edi, %ecx		#  signal size in bytes
-	shrl		$4, %ecx		#  N, signal size in points
+	shrl		$4, %ecx		#  L, signal size in points
 _next_pair_d:
 	movapd		(%esi), %xmm6		#  s[j]
 	movapd		(%ebx), %xmm4		#  a = data[j]
@@ -138,11 +144,12 @@ _next_pair_d:
 
 	addl		$16, %ebx		#  data += 1
 	addl		$16, %esi		#  p_s += 1
-	loop		_next_pair_d
+	subl		$1, %ecx
+	jnz		_next_pair_d
 
 	addl		%edi, %ebx		#  data += n
 
-	decl		%edx			#  signal counter
+	subl		$1, %edx		#  signal counter
 	jnz		_next_signal_d
 
 	emms

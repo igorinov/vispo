@@ -1,17 +1,28 @@
-.global	fft_join_s
-.global	fft_join_d
+.global	fft_combine_s
+.global	fft_combine_d
 
 .code64
 
-fft_join_s:
+#  RDI - complex sinusoid for this round
+#  RSI - signal data
+
+was:
+#  RDX - number of signals
+#  RCX - signal size
+
+now:
+#  RDX - signal size
+#  RCX - number of signals
+
+fft_combine_s:
 	push		%rbx
 
-	movq		%rcx, %r9			#  N, signal size
+	movq		%rdx, %r9			#  L, signal size
 
-	movq		%rcx, %rax			#  N, signal size
+	movq		%rdx, %rax			#  L, signal size
 	shlq		$3, %rax			#  signal size in bytes
 	movq		%rax, %r11
-	addq		%rsi, %rax			#  odd spectrum = data + N
+	addq		%rsi, %rax			#  odd spectrum = data + L
 	movq		%rax, %r10
 
 	test		$0x1f, %rbx			#  alignment check
@@ -25,10 +36,8 @@ fft_join_s:
 
 _next_signal_s4a:
 
-	movq		%rdi, %rbx			#  S, complex sinusoid lookup table
-	movq		%r9, %rcx
-
-	shrq		$2, %rcx
+	movq		%rdi, %rbx			#  S, complex sinusoid for this stage
+	movq		%r9, %rdx
 
 _next_pair_s4a:
 	vmovaps		(%rbx), %ymm6			#  { s0, s1, s2, s3 }
@@ -53,20 +62,21 @@ _next_pair_s4a:
 	addq		$32, %rsi			#  pt_a += 4
 	addq		$32, %r10			#  pt_b += 4
 	addq		$32, %rbx			#  pt_s += 4
-	loop		_next_pair_s4a
+	subq		$4, %rdx
+	jnz		_next_pair_s4a
 
 	addq		%r11, %rsi			#  pt_a += n
 	addq		%r11, %r10			#  pt_b += n
 
-	decq		%rdx				#  signal counter
+	subq		$1, %rcx			#  signal counter
 	jnz		_next_signal_s4a
 
 	jmp		_end_s
 
 _next_signal_s1:
 
-	movq		%rdi, %rbx			#  S, complex sinusoid lookup table
-	movq		%r9, %rcx
+	movq		%rdi, %rbx			#  S, complex sinusoid for this stage
+	movq		%r9, %rdx
 
 _next_pair_s1:
 	movlps		(%rbx), %xmm6			#  s[j]
@@ -95,12 +105,13 @@ _next_pair_s1:
 	addq		$8, %rsi			#  pt_a += 1
 	addq		$8, %r10			#  pt_b += 1
 	addq		$8, %rbx			#  pt_s += 1
-	loop		_next_pair_s1
+	subq		$1, %rdx			#  sample counter
+	jnz		_next_pair_s1
 
 	addq		%r11, %rsi			#  pt_a += n
 	addq		%r11, %r10			#  pt_b += n
 
-	decq		%rdx				#  signal counter
+	decq		%rcx				#  signal counter
 	jnz		_next_signal_s1
 _end_s:
 	emms
@@ -108,15 +119,15 @@ _end_s:
 	pop		%rbx
 	ret
 
-fft_join_d:
+fft_combine_d:
 	push		%rbx
 
-	movq		%rcx, %r9			#  N, signal size
+	movq		%rdx, %r9			#  L, signal size
 
-	movq		%rcx, %rax			#  N, signal size
+	movq		%rdx, %rax			#  L, signal size
 	shlq		$4, %rax			#  signal size in bytes
 	movq		%rax, %r11
-	addq		%rsi, %rax			#  data + N
+	addq		%rsi, %rax			#  data + L
 	movq		%rax, %r10
 
 	test		$0x1f, %rbx
@@ -130,8 +141,7 @@ fft_join_d:
 
 _next_signal_d2a:
 	movq		%rdi, %rbx			#  S, complex sinusoid lookup table
-	movq		%r9, %rcx
-	shrq		$1, %rcx
+	movq		%r9, %rdx
 
 _next_pair_d2a:
 	vmovapd		(%rbx), %ymm6			#  { s0, s1 }
@@ -154,19 +164,20 @@ _next_pair_d2a:
 	addq		$32, %rsi			#  pt_a += 2
 	addq		$32, %r10			#  pt_b += 2
 	addq		$32, %rbx			#  pt_s += 2
-	loop		_next_pair_d2a
+	subq		$2, %rdx			#  sample counter
+	jnz		_next_pair_d2a
 
 	addq		%r11, %rsi			#  pt_a += n
 	addq		%r11, %r10			#  pt_b += n
 
-	decq		%rdx				#  signal counter
+	subq		$1, %rcx			#  signal counter
 	jnz		_next_signal_d2a
 
 	jmp		_end_d
 
 _next_signal_d1:
 	movq		%rdi, %rbx			#  S, complex sinusoid lookup table
-	movq		%r9, %rcx
+	movq		%r9, %rdx
 
 _next_pair_d1:
 	movapd		(%rbx), %xmm6			#  s[j]
@@ -191,12 +202,13 @@ _next_pair_d1:
 	addq		$16, %rsi			#  pt_a += 1
 	addq		$16, %r10			#  pt_b += 1
 	addq		$16, %rbx			#  pt_s += 1
-	loop		_next_pair_d1
+	subq		$1, %rdx			#  sample counter
+	jnz		_next_pair_d1
 
 	addq		%r11, %rsi			#  pt_a += n
 	addq		%r11, %r10			#  pt_b += n
 
-	decq		%rdx				#  signal counter
+	subq		$1, %rcx			#  signal counter
 	jnz		_next_signal_d1
 _end_d:
 

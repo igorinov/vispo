@@ -1,6 +1,6 @@
 .global bit_reverse
-.global	fft_join_s
-.global	fft_join_d
+.global	fft_combine_s
+.global	fft_combine_d
 
 .text
 
@@ -11,14 +11,19 @@ bit_reverse:
 	ror	x0, x0, x1
 	ret
 
-fft_join_s:
-	mov	x10, x1			//  data
-	add	x11, x10, x3, lsl #3	//  data + n
-_next_signal_s:
-	mov	x12, x0			//  complex sinusoid table
-	mov	x9, x3
+#  X0 - complex sinusoid for this stage
+#  X1 - signal data
+#  X2 - signal length (l)
+#  X3 - number of signal pairs (m)
 
-	tst	x9, #3			//  is N multiple of 4 ?
+fft_combine_s:
+	mov	x10, x1			//  data
+	add	x11, x10, x2, lsl #3	//  data + l
+_next_signal_s:
+	mov	x12, x0			//  complex sinusoid for this stage
+	mov	x9, x2
+
+	tst	x9, #3			//  is L multiple of 4 ?
 	bne	_next_pair_s1
 
 _next_pair_s4:
@@ -103,21 +108,21 @@ _next_pair_s1:
 	bne	_next_pair_s1
 
 _end_signal_s:
-	add	x10, x10, x3, lsl #3	//  data += n
-	add	x11, x11, x3, lsl #3
+	add	x10, x10, x2, lsl #3	//  data += l
+	add	x11, x11, x2, lsl #3
 
-	sub	x2, x2, #1		//  signal counter
-	cmp	x2, #0
+	sub	x3, x3, #1		//  signal counter
+	cmp	x3, #0
 	bne	_next_signal_s
 
 	ret
 
-fft_join_d:
+fft_combine_d:
 	mov	x10, x1			//  data
-	add	x11, x10, x3, lsl #4	//  data + n
+	add	x11, x10, x3, lsl #4	//  data + l
 _next_signal_d:
 	mov	x12, x0			//  complex sinusoid table
-	mov	x9, x3
+	mov	x9, x2
 _next_pair_d:
 	ld1	{ v2.2d }, [x12]	// s
 	ld1	{ v0.2d }, [x10]	// a
@@ -148,13 +153,14 @@ _next_pair_d:
 	cmp	x9, #0
 	bne	_next_pair_d
 
-	add	x10, x10, x3, lsl #4	//  data += n
-	add	x11, x11, x3, lsl #4
+	add	x10, x10, x2, lsl #4	//  data += n
+	add	x11, x11, x2, lsl #4
 
-	sub	x2, x2, #1		//  m -= 1
-	cmp	x2, #0
+	sub	x3, x3, #1		//  m -= 1
+	cmp	x3, #0
 	bne	_next_signal_d
 
 	ret
 
 	.size	fft_join_s, . - fft_join_s
+

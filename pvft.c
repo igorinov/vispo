@@ -1,6 +1,6 @@
 /**
  *  Copyright (C) 2016 Ivan Gorinov
- *  License: MIT
+ *  License: BSD
  */
 
 #include <stdio.h>
@@ -15,8 +15,8 @@
 #endif
 
 #ifdef ASSEMBLY_FFT
-int fft_join_s(const complex_s *s, complex_s *data, int m, int n);
-int fft_join_d(const complex_d *s, complex_d *data, int m, int n);
+int fft_combine_s(const complex_s *s, complex_s *data, int m, int n);
+int fft_combine_d(const complex_d *s, complex_d *data, int m, int n);
 #endif
 
 /**
@@ -192,7 +192,7 @@ int fft_setup_s(complex_s *cs, int n, int inverse)
 }
 
 /**
- *  dft_direct() - simple DFT, any size
+ *  dft_complex() - simple DFT, any size
  *  @s - sinusoid table prepared by dft_setup()
  *  @data - input data
  *  @out - output buffer
@@ -213,7 +213,8 @@ int dft_complex_d(const complex_d *cs, complex_d *output, const complex_d *input
 
 /**
  *  dft_complex_step() - compute DFT of complex signal
- *  using Kahan's algorithm to reduce numerical error
+ *  using compensated summation (Kahan's algorithm) to
+ *  reduce numerical error
  *  @s - complex sinusoid table prepared by dft_setup()
  *  @input - input data
  *  @output - output buffer
@@ -328,8 +329,8 @@ int dft_complex_step_s(const complex_s *s, complex_s *output, const complex_s *i
 			acc[j] = sum[j];
 		}
 	}
-	output[0].re = sum[0];
-	output[0].im = sum[1];
+	output[0].re = acc[0];
+	output[0].im = acc[1];
 
 	for (k = 1; k < n; k += 1) {
 		px = input;
@@ -509,11 +510,11 @@ int dft_real_step_s(const complex_s *s, complex_s *output, const float *input, i
 			x = *pt;
 
 #ifdef USE_FMA
-			inc[0] = fma(Re(*ps), x, inc[0]);
-			inc[1] = fma(Im(*ps), x, inc[1]);
+			inc[0] = fma(ps->re, x, inc[0]);
+			inc[1] = fma(ps->im, x, inc[1]);
 #else
-			inc[0] += x * Re(*ps);
-			inc[1] += x * Im(*ps);
+			inc[0] += x * ps->re;
+			inc[1] += x * ps->im;
 #endif
 			/* this should be vectorized by SIMD-enabled compiler */
 
@@ -543,100 +544,180 @@ int dft_real_step_s(const complex_s *s, complex_s *output, const float *input, i
 #ifndef ASSEMBLY_FFT
 
 /**
- *  fft_join() - combine M spectrum pairs, N points each
+ *  fft_combine() - combine M spectrum pairs, N points each
  *  into M spectra, N * 2 points each
  *
- *  @cs - complex sinusoid table for this round
+ *  @pt_w - complex sinusoid table for this stage
+ *  @l - signal length, complex samples
+ *  @m - number of signals
  */
 
-int fft_join_d(const complex_d *pt_s, complex_d *data, int m, int n)
+int fft_combine_d(const complex_d *pt_w, complex_d *data, int l, int m)
 {
-	complex_d s, a, b, t;
+	complex_d w, a, b, t;
 	int i, j;
 
 	for (i = 0; i < m; i += 1) {
-		/* pt_s = cs + n * 2; */
-		for (j = 0; j < n; j += 1) {
-			s = pt_s[j];
+		for (j = 0; j < l; j += 1) {
+			w = pt_w[j];
 			a = data[j];
-			b = data[n + j];
-			t.re = Re(b) * Re(s) - Im(b) * Im(s);
-			t.im = Im(b) * Re(s) + Re(b) * Im(s);
-			b.re = Re(a) - Re(t);
-			b.im = Im(a) - Im(t);
+			b = data[l + j];
+			t.re = b.re * w.re - b.im * w.im;
+			t.im = b.im * w.re + b.re * w.im;
+			b.re = a.re - t.re;
+			b.im = a.im - t.im;
 			a.re += t.re;
 			a.im += t.im;
 			data[j] = a;
-			data[n + j] = b;
+			data[l + j] = b;
 		}
-		data += n * 2;
+		data += l * 2;
 	}
 }
 
-int fft_join_s(const complex_s *pt_s, complex_s *data, int m, int n)
+int fft_combine_s(const complex_s *pt_w, complex_s *data, int l, int m)
 {
-	complex_s s, a, b, t;
+	complex_s w, a, b, t;
 	int i, j;
 
 	for (i = 0; i < m; i += 1) {
-		/* pt_s = cs + n * 2; */
-		for (j = 0; j < n; j += 1) {
-			s = pt_s[j];
+		for (j = 0; j < l; j += 1) {
+			w = pt_w[j];
 			a = data[j];
-			b = data[n + j];
-			t.re = Re(b) * Re(s) - Im(b) * Im(s);
-			t.im = Im(b) * Re(s) + Re(b) * Im(s);
-			b.re = Re(a) - Re(t);
-			b.im = Im(a) - Im(t);
+			b = data[l + j];
+			t.re = b.re * w.re - b.im * w.im;
+			t.im = b.im * w.re + b.re * w.im;
+			b.re = a.re - t.re;
+			b.im = a.im - t.im;
 			a.re += t.re;
 			a.im += t.im;
 			data[j] = a;
-			data[n + j] = b;
+			data[l + j] = b;
 		}
-		data += n * 2;
+		data += l * 2;
 	}
 }
 
 #endif  /* ASSEMBLY_FFT */
 
 /**
- *  fft_synthesis() - combine M spectrum pairs, N points each
- *  into one spectrum, M * N * 2 points
+ *  fft_combine_interleaved() - one stage of interleaved transform
+ *  combine M spectrum pairs, N points each
+ *  into M spectra, N * 2 points each (interleaved data)
  *
- *  @cs - complex sinusoid table, prepared by fft_setup()
+ *  @pt_w - complex sinusoid table for this stage
+ *  @l - signal length, complex samples
+ *  @m - number of signals in one channel
+ *  @n - number of interleaved channels
  */
 
-int fft_synthesis_s(const complex_s *cs, complex_s *data, int m, int n)
+int fft_combine_interleaved_d(const complex_d *pt_w, complex_d *data, int l, int m, int d)
 {
-/*
-	const complex_s *pt_s;
-	complex_s t, *pt_a, *pt_b;
+	complex_d w, a, b, t;
+	int ld = l * d;
 	int i, j, k;
-	int bits = 0;
-	int si;
-*/
+
+	for (i = 0; i < m; i += 1) {
+		for (j = 0; j < l; j += 1) {
+			w = pt_w[j];
+			for (k = 0; k < d; k += 1) {
+				a = data[k];
+				b = data[ld + k];
+				t.re = b.re * w.re - b.im * w.im;
+				t.im = b.im * w.re + b.re * w.im;
+				b.re = a.re - t.re;
+				b.im = a.im - t.im;
+				a.re += t.re;
+				a.im += t.im;
+				data[k] = a;
+				data[ld + k] = b;
+			}
+			data += k;
+		}
+		data += ld;
+	}
+}
+
+int fft_combine_interleaved_s(const complex_s *pt_w, complex_s *data, int l, int m, int d)
+{
+	complex_s w, a, b, t;
+	int ld = l * d;
+	int i, j, k;
+
+	for (i = 0; i < m; i += 1) {
+		for (j = 0; j < l; j += 1) {
+			w = pt_w[j];
+			for (k = 0; k < d; k += 1) {
+				a = data[k];
+				b = data[ld + k];
+				t.re = b.re * w.re - b.im * w.im;
+				t.im = b.im * w.re + b.re * w.im;
+				b.re = a.re - t.re;
+				b.im = a.im - t.im;
+				a.re += t.re;
+				a.im += t.im;
+				data[k] = a;
+				data[ld + k] = b;
+			}
+			data += k;
+		}
+		data += ld;
+	}
+}
+
+/**
+ *  fft_combine_loop() - combine M spectrum pairs, L points each
+ *  into one spectrum, L * M * 2 points
+ *
+ *  @cs - complex sinusoid tables, prepared by fft_setup()
+ */
+
+int fft_combine_loop_s(const complex_s *ww, complex_s *data, int l, int m)
+{
 	while (!(m & 1)) {
 		m >>= 1;
-		fft_join_s(cs + n * 2, data, m, n);
-		n <<= 1;
+		fft_combine_s(ww + l * 2, data, l, m);
+		l <<= 1;
 	}
 
 	return m;
 }
 
-int fft_synthesis_d(const complex_d *cs, complex_d *data, int m, int n)
+int fft_combine_loop_d(const complex_d *ww, complex_d *data, int l, int m)
 {
-/*
-	const complex_d *pt_s;
-	complex_d t, *pt_a, *pt_b;
-	int i, j, k;
-	int bits = 0;
-	int si;
-*/
 	while (!(m & 1)) {
 		m >>= 1;
-		fft_join_d(cs + n * 2, data, m, n);
-		n <<= 1;
+		fft_combine_d(ww + l * 2, data, l, m);
+		l <<= 1;
+	}
+
+	return m;
+}
+
+/**
+ *  fft_combine_loop_step() - combine M spectrum pairs, L points each
+ *  into one spectrum, L * M * 2 points (D interleaved channels)
+ *
+ *  @cs - complex sinusoid tables, prepared by fft_setup()
+ */
+
+int fft_combine_loop_step_s(const complex_s *ww, complex_s *data, int l, int m, int d)
+{
+	while (!(m & 1)) {
+		m >>= 1;
+		fft_combine_interleaved_s(ww + l * 2, data, l, m, d);
+		l <<= 1;
+	}
+
+	return m;
+}
+
+int fft_combine_loop_step_d(const complex_d *ww, complex_d *data, int l, int m, int d)
+{
+	while (!(m & 1)) {
+		m >>= 1;
+		fft_combine_interleaved_d(ww + l * 2, data, l, m, d);
+		l <<= 1;
 	}
 
 	return m;
@@ -663,66 +744,132 @@ int bit_reverse(int i, int bits)
  *  fft_complex() - compute FFT from complex data
  */
 
-int fft_complex_d(const complex_d *cs, complex_d *out, const complex_d *in, int size)
+int fft_complex_d(const complex_d *ww, complex_d *out, const complex_d *in, int size)
 {
 	int i, j, k;
 	int bits = 0;
 	int m = 1;
-	int n = size;
+	int l = size;
+	complex_d *dft_ptr;
+
+	/* length = l * m,  m = 2 ^ bits */
+
+	while (l > 1) {
+		if (l & 1)
+			break;
+		l >>= 1;
+		m <<= 1;
+		bits += 1;
+	}
+
+	for (i = 0; i < m; i += 1) {
+		j = bit_reverse(i, bits);
+
+		if (l > 1) {
+			dft_complex_step_d(ww + l, out + j * l, in + i, l, m);
+		} else {
+			out[j] = in[i];
+		}
+	}
+
+	return fft_combine_loop_d(ww, out, l, m);
+}
+
+int fft_complex_s(const complex_s *ww, complex_s *out, const complex_s *in, int size)
+{
+	int i, j, k;
+	int bits = 0;
+	int m = 1;
+	int l = size;
+	complex_s *dft_ptr;
+
+	/* length = l * m,  m = 2 ^ bits */
+
+	while (l > 1) {
+		if (l & 1)
+			break;
+		l >>= 1;
+		m <<= 1;
+		bits += 1;
+	}
+
+	for (i = 0; i < m; i += 1) {
+		j = bit_reverse(i, bits);
+
+		if (l > 1) {
+			dft_complex_step_s(ww + l, out + j * l, in + i, l, m);
+		} else {
+			out[j] = in[i];
+		}
+	}
+
+	return fft_combine_loop_s(ww, out, l, m);
+}
+
+/**
+ *  fft_complex_step() - compute FFT from complex data, with interleaving
+ */
+
+int fft_complex_step_d(const complex_d *ww, complex_d *out, const complex_d *in, int size, int step)
+{
+	int i, j, k;
+	int bits = 0;
+	int m = 1;
+	int l = size;
 	complex_d *dft_ptr;
 
 	/* length = m * n,  m = 2 ^ bits */
 
-	while (n > 1) {
-		if (n & 1)
+	while (l > 1) {
+		if (l & 1)
 			break;
-		n >>= 1;
+		l >>= 1;
 		m <<= 1;
 		bits += 1;
 	}
 
 	for (i = 0; i < m; i += 1) {
-		j = bit_reverse(i, bits);
+		j = bit_reverse(i, bits) * step;
 
-		if (n > 1) {
-			dft_complex_step_d(cs + n, out + j * n, in + i, n, m);
+		if (l > 1) {
+			dft_complex_step_d(ww + l, out + j * l, in + i * step, l, m * step);
 		} else {
-			out[j] = in[i];
+			out[j] = in[i * step];
 		}
 	}
 
-	return fft_synthesis_d(cs, out, m, n);
+	return fft_combine_loop_step_d(ww, out, l, m, step);
 }
 
-int fft_complex_s(const complex_s *cs, complex_s *out, const complex_s *in, int size)
+int fft_complex_step_s(const complex_s *ww, complex_s *out, const complex_s *in, int size, int step)
 {
 	int i, j, k;
 	int bits = 0;
 	int m = 1;
-	int n = size;
+	int l = size;
 	complex_s *dft_ptr;
 
-	/* length = m * n,  m = 2 ^ bits */
+	/* length = l * m,  m = 2 ^ bits */
 
-	while (n > 1) {
-		if (n & 1)
+	while (l > 1) {
+		if (l & 1)
 			break;
-		n >>= 1;
+		l >>= 1;
 		m <<= 1;
 		bits += 1;
 	}
 
 	for (i = 0; i < m; i += 1) {
-		j = bit_reverse(i, bits);
+		j = bit_reverse(i, bits) * step;
 
-		if (n > 1) {
-			dft_complex_step_s(cs + n, out + j * n, in + i, n, m);
+		if (l > 1) {
+			dft_complex_step_s(ww + l, out + j * l, in + i * step, l, m * step);
 		} else {
-			out[j] = in[i];
+			out[j] = in[i * step];
 		}
 	}
 
-	return fft_synthesis_s(cs, out, m, n);
+	return fft_combine_loop_step_s(ww, out, l, m, step);
 }
 
 /**
@@ -757,7 +904,7 @@ int fft_real_odd_d(const complex_d *cs, complex_d *out, const double *in, int si
 		}
 	}
 
-	return fft_synthesis_d(cs, out, m, n);
+	return fft_combine_loop_d(cs, out, n, m);
 }
 
 
@@ -792,7 +939,7 @@ int fft_real_odd_s(const complex_s *cs, complex_s *out, const float *in, int siz
 	if (m == 1)
 		return 1;
 
-	return fft_synthesis_s(cs, out, m, n);
+	return fft_combine_loop_s(cs, out, n, m);
 }
 
 /**
@@ -850,7 +997,7 @@ int fft_real_d(const complex_d *cs, complex_d *out, const double *input, int n)
 	out[c + i].im = 0;
 	out[i].im = 0;
 
-	return fft_synthesis_d(cs, out, 2, c);
+	return fft_combine_loop_d(cs, out, c, 2);
 }
 
 int fft_real_s(const complex_s *cs, complex_s *out, const float *input, int n)
@@ -902,5 +1049,6 @@ int fft_real_s(const complex_s *cs, complex_s *out, const float *input, int n)
 	out[c + i].im = 0;
 	out[i].im = 0;
 
-	return fft_synthesis_s(cs, out, 2, c);
+	return fft_combine_loop_s(cs, out, c, 2);
 }
+
