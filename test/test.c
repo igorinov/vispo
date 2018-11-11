@@ -329,6 +329,8 @@ int main(int argc, char **argv)
 	int i, k, c;
 	long l;
 
+	pvft_init();
+
 	filedata = alloc_large(sizeof(short) * DFT_MAX);
 	cs_forward_d = alloc_large(sizeof(complex_d) * DFT_MAX * 2);
 	cs_inverse_d = alloc_large(sizeof(complex_d) * DFT_MAX * 2);

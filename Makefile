@@ -1,5 +1,5 @@
-VERSION_MAJOR = 1
-VERSION = 1.0.0
+VERSION_MAJOR = 2
+VERSION = 2.0.0
 PROJECT_NAME=pvft
 PREFIX=/usr/local
 
@@ -8,34 +8,34 @@ SONAME = lib$(PROJECT_NAME).so.$(VERSION_MAJOR)
 
 HEADERS = pvft.h
 
-OBJECTS = pvft.o
+OBJECTS = pvft.o combine.o
 
 TARGET_ARCH := $(shell uname -m)
 
 CFLAGS = -fPIC -O2
 
 ifeq ($(TARGET_ARCH),armeabi-v7a)
-OBJECTS += $(TARGET_ARCH)/combine.o
+#OBJECTS += combine.o
 CFLAGS += -DDASSEMBLY_FFT
 CFLAGS += -DBITREV
 CFLAGS += -mfpu=neon
 endif
 
 ifeq ($(TARGET_ARCH),arm64-v8a)
-OBJECTS += $(TARGET_ARCH)/combine.o
+#OBJECTS += combine.o
 CFLAGS += -DDASSEMBLY_FFT
 CFLAGS += -DBITREV
 endif
 
 ifeq ($(TARGET_ARCH),x86)
-OBJECTS += $(TARGET_ARCH)/combine.o
+#OBJECTS += combine.o
 CFLAGS += -DASSEMBLY_FFT
 CFLAGS += -m32
 SFLAGS += -m32
 endif
 
 ifeq ($(TARGET_ARCH),x86_64)
-OBJECTS += $(TARGET_ARCH)/combine.o
+#OBJECTS += combine.o
 CFLAGS += -DASSEMBLY_FFT
 CFLAGS += -m64
 SFLAGS += -m64
@@ -60,11 +60,11 @@ install: $(LIB_NAME)
 $(LIB_NAME): $(OBJECTS)
 	$(CC) -shared -Wl,-soname,$(SONAME) -o $@ $(OBJECTS) $(LIBS)
 
-pvft.o: pvft.c
-	$(CC) -c -o $@ $(CFLAGS) $(LIBS) pvft.c
-
-$(TARGET_ARCH)/%.o: $(TARGET_ARCH)/%.S
+%.o: $(TARGET_ARCH)/%.S
 	$(CC) -c -o $@ $(SFLAGS) $<
+
+%.o: %.c
+	$(CC) -c -o $@ $(CFLAGS) $(LIBS) $<
 
 test: test.c $(OBJECTS)
 	$(CC) -o $@ $(CFLAGS) test.c -l$(PROJECT_NAME) $(LIBS)

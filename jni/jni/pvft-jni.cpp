@@ -7,9 +7,9 @@
 #include "pvft.h"
 
 #define CLASS_NAME FourierTransform
-#define CAT_NAME(a, b, c, d) a ## b ## _ ## c ## _ ## d
-#define JAVA_NAME(p, c, n) CAT_NAME(Java_, p, c, n)
-#define FN_NAME(name) JAVA_NAME(PACKAGE_NAME, CLASS_NAME, name)
+#define CAT_NAMES(a, b, c, d) a ## _ ## b ## _ ## c ## _ ## d
+#define JAVA_NAME(p, c, n) CAT_NAMES(Java_, p, c, n)
+#define FN_NAME(method) JAVA_NAME(PACKAGE_NAME, CLASS_NAME, method)
 
 extern "C" JNIEXPORT jint JNICALL FN_NAME(fftSetup)(JNIEnv *env, jclass jc,
     jdoubleArray jce, jint size, jboolean inverse)

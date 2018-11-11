@@ -1,3 +1,9 @@
+/*
+ *  Copyright (C) Ivan Gorinov, 2016
+ *
+ *  SPDX-License-Identifier: BSD-2-Clause
+ */
+
 .global bit_reverse
 .global	fft_combine_s
 .global	fft_combine_d
@@ -11,16 +17,18 @@ bit_reverse:
 	ror	x0, x0, x1
 	ret
 
-#  X0 - complex sinusoid for this stage
+#  X0 - complex sinusoid for this round
 #  X1 - signal data
-#  X2 - signal length (l)
-#  X3 - number of signal pairs (m)
+#  X2 - signal size (L)
+#  X3 - number of signals (M)
+#
+#  V8-V15 are preserved (not used)
 
 fft_combine_s:
 	mov	x10, x1			//  data
-	add	x11, x10, x2, lsl #3	//  data + l
+	add	x11, x10, x2, lsl #3	//  data + L
 _next_signal_s:
-	mov	x12, x0			//  complex sinusoid for this stage
+	mov	x12, x0			//  complex sinusoid table
 	mov	x9, x2
 
 	tst	x9, #3			//  is L multiple of 4 ?
@@ -48,8 +56,8 @@ _next_pair_s4:
 	fmul	v4.4s, v3.4s, v4.4s	// Im(b)·Re(s)
 	fmul	v5.4s, v3.4s, v5.4s	// Im(y)·Im(s)
 
-	fsub	v6.4s, v6.4s, v5.4s	// Re(b·s) = Re(b)·Re(s) - Im(b)·Im(s)
-	fadd	v7.4s, v4.4s, v7.4s	// Im(b·s) = Im(b)·Re(s) + Re(b)·Im(s)
+	fsub	v6.4s, v6.4s, v5.4s	// Re(bs) = Re(b)·Re(s) - Im(b)·Im(s)
+	fadd	v7.4s, v4.4s, v7.4s	// Im(bs) = Im(b)·Re(s) + Re(b)·Im(s)
 
 	fsub	v2.4s, v0.4s, v6.4s	// Re(B) = Re(a) - Re(b·s)
 	fsub	v3.4s, v1.4s, v7.4s	// Im(B) = Im(a) - Im(b·s)
@@ -108,7 +116,7 @@ _next_pair_s1:
 	bne	_next_pair_s1
 
 _end_signal_s:
-	add	x10, x10, x2, lsl #3	//  data += l
+	add	x10, x10, x2, lsl #3	//  data += L
 	add	x11, x11, x2, lsl #3
 
 	sub	x3, x3, #1		//  signal counter
@@ -117,9 +125,11 @@ _end_signal_s:
 
 	ret
 
+	.size	fft_combine_s, . - fft_combine_s
+
 fft_combine_d:
 	mov	x10, x1			//  data
-	add	x11, x10, x3, lsl #4	//  data + l
+	add	x11, x10, x2, lsl #4	//  data + L
 _next_signal_d:
 	mov	x12, x0			//  complex sinusoid table
 	mov	x9, x2
@@ -153,7 +163,7 @@ _next_pair_d:
 	cmp	x9, #0
 	bne	_next_pair_d
 
-	add	x10, x10, x2, lsl #4	//  data += n
+	add	x10, x10, x2, lsl #4	//  data += L
 	add	x11, x11, x2, lsl #4
 
 	sub	x3, x3, #1		//  m -= 1
@@ -162,5 +172,5 @@ _next_pair_d:
 
 	ret
 
-	.size	fft_join_s, . - fft_join_s
+	.size	fft_combine_d, . - fft_combine_d
 

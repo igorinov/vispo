@@ -1,6 +1,7 @@
 /**
  *  Copyright (C) 2016 Ivan Gorinov
- *  License: BSD
+ *
+ *  SPDX-License-Identifier: BSD-2-Clause
  */
 
 #include <stdio.h>
@@ -12,11 +13,6 @@
 
 #if (__STDC_VERSION__ >= 199901L)
 #define USE_FMA
-#endif
-
-#ifdef ASSEMBLY_FFT
-int fft_combine_s(const complex_s *s, complex_s *data, int m, int n);
-int fft_combine_d(const complex_d *s, complex_d *data, int m, int n);
 #endif
 
 /**
@@ -395,7 +391,7 @@ int dft_complex_step_s(const complex_s *s, complex_s *output, const complex_s *i
  *  @in_step - interleaving step
  */
 
-int dft_real_step_d(const complex_d *s, complex_d *output, const double *input, int n, int in_step)
+int dft_real_step_d(const complex_d *s, complex_d *output, const double *input, int n, int in_step, int f_step)
 {
 	const complex_d *ps;
 	const double *pt;
@@ -403,7 +399,8 @@ int dft_real_step_d(const complex_d *s, complex_d *output, const double *input, 
 	double inc[2];
 	double sum[2];
 	double x, y;
-	int i, j, k, si;
+	int i, j, k, si, ss;
+	int s_end = n * f_step;
 
 	/* DC component */
 
@@ -420,7 +417,9 @@ int dft_real_step_d(const complex_d *s, complex_d *output, const double *input, 
 	output[0].re = acc[0];
 	output[0].im = 0;
 
+	ss = 0;
 	for (k = 1; k < n; k += 1) {
+		ss += f_step;
 		pt = input;
 		acc[0] = *pt;
 		acc[1] = 0;
@@ -430,7 +429,7 @@ int dft_real_step_d(const complex_d *s, complex_d *output, const double *input, 
 		for (j = 0; j < 2; j += 1)
 			inc[j] = 0;
 
-        	si = k;
+        	si = ss;
 		for (i = 1; i < n; i += 1) {
 			pt += in_step;
 			ps = s + si;
@@ -457,9 +456,9 @@ int dft_real_step_d(const complex_d *s, complex_d *output, const double *input, 
 			/*
 			 * si = (i * k) % n
 			 */
-			si += k;
-			if (si >= n)
-				si -= n;
+			si += ss;
+			if (si >= s_end)
+				si -= s_end;
 		}
 		output[k].re = acc[0];
 		output[k].im = acc[1];
@@ -468,7 +467,7 @@ int dft_real_step_d(const complex_d *s, complex_d *output, const double *input, 
 	return k;
 }
 
-int dft_real_step_s(const complex_s *s, complex_s *output, const float *input, int n, int in_step)
+int dft_real_step_s(const complex_s *s, complex_s *output, const float *input, int n, int in_step, int f_step)
 {
 	const complex_s *ps;
 	const float *pt;
@@ -476,7 +475,8 @@ int dft_real_step_s(const complex_s *s, complex_s *output, const float *input, i
 	float inc[2];
 	float sum[2];
 	float x, y;
-	int i, j, k, si;
+	int i, j, k, si, ss;
+	int s_end = n * f_step;
 
 	/* DC component */
 
@@ -493,7 +493,9 @@ int dft_real_step_s(const complex_s *s, complex_s *output, const float *input, i
 	output[0].re = acc[0];
 	output[0].im = 0;
 
+	ss = 0;
 	for (k = 1; k < n; k += 1) {
+		ss += f_step;
 		pt = input;
 		acc[0] = *pt;
 		acc[1] = 0;
@@ -503,7 +505,7 @@ int dft_real_step_s(const complex_s *s, complex_s *output, const float *input, i
 		for (j = 0; j < 2; j += 1)
 			inc[j] = 0;
 
-        	si = k;
+        	si = ss;
 		for (i = 1; i < n; i += 1) {
 			pt += in_step;
 			ps = s + si;
@@ -530,9 +532,9 @@ int dft_real_step_s(const complex_s *s, complex_s *output, const float *input, i
 			/*
 			 * si = (i * k) % n
 			 */
-			si += k;
-			if (si >= n)
-				si -= n;
+			si += ss;
+			if (si >= s_end)
+				si -= s_end;
 		}
 		output[k].re = acc[0];
 		output[k].im = acc[1];
@@ -541,69 +543,10 @@ int dft_real_step_s(const complex_s *s, complex_s *output, const float *input, i
 	return k;
 }
 
-#ifndef ASSEMBLY_FFT
-
-/**
- *  fft_combine() - combine M spectrum pairs, N points each
- *  into M spectra, N * 2 points each
- *
- *  @pt_w - complex sinusoid table for this stage
- *  @l - signal length, complex samples
- *  @m - number of signals
- */
-
-int fft_combine_d(const complex_d *pt_w, complex_d *data, int l, int m)
-{
-	complex_d w, a, b, t;
-	int i, j;
-
-	for (i = 0; i < m; i += 1) {
-		for (j = 0; j < l; j += 1) {
-			w = pt_w[j];
-			a = data[j];
-			b = data[l + j];
-			t.re = b.re * w.re - b.im * w.im;
-			t.im = b.im * w.re + b.re * w.im;
-			b.re = a.re - t.re;
-			b.im = a.im - t.im;
-			a.re += t.re;
-			a.im += t.im;
-			data[j] = a;
-			data[l + j] = b;
-		}
-		data += l * 2;
-	}
-}
-
-int fft_combine_s(const complex_s *pt_w, complex_s *data, int l, int m)
-{
-	complex_s w, a, b, t;
-	int i, j;
-
-	for (i = 0; i < m; i += 1) {
-		for (j = 0; j < l; j += 1) {
-			w = pt_w[j];
-			a = data[j];
-			b = data[l + j];
-			t.re = b.re * w.re - b.im * w.im;
-			t.im = b.im * w.re + b.re * w.im;
-			b.re = a.re - t.re;
-			b.im = a.im - t.im;
-			a.re += t.re;
-			a.im += t.im;
-			data[j] = a;
-			data[l + j] = b;
-		}
-		data += l * 2;
-	}
-}
-
-#endif  /* ASSEMBLY_FFT */
-
 /**
  *  fft_combine_interleaved() - one stage of interleaved transform
- *  combine M spectrum pairs, N points each
- *  into M spectra, N * 2 points each (interleaved data)
+ *  combine M spectrum pairs, L points each
+ *  into M spectra, L * 2 points each (interleaved data)
  *
  *  @pt_w - complex sinusoid table for this stage
  *  @l - signal length, complex samples
@@ -705,7 +648,10 @@ int fft_combine_loop_step_s(const complex_s *ww, complex_s *data, int l, int m, 
 {
 	while (!(m & 1)) {
 		m >>= 1;
+/*
 		fft_combine_interleaved_s(ww + l * 2, data, l, m, d);
+*/
+		fft_combine_s(ww + l * 2, data, l, m * d);
 		l <<= 1;
 	}
 
@@ -807,10 +753,11 @@ int fft_complex_s(const complex_s *ww, complex_s *out, const complex_s *in, int 
 }
 
 /**
- *  fft_complex_step() - compute FFT from complex data, with interleaving
+ *  fft_complex_columns() - compute FFT from complex data,
+ *  transforming every column of 2D matrix
  */
 
-int fft_complex_step_d(const complex_d *ww, complex_d *out, const complex_d *in, int size, int step)
+int fft_complex_columns_d(const complex_d *ww, complex_d *out, const complex_d *in, int size, int step)
 {
 	int i, j, k;
 	int bits = 0;
@@ -897,7 +844,7 @@ int fft_real_odd_d(const complex_d *cs, complex_d *out, const double *in, int si
 		j = bit_reverse(i, bits);
 
 		if (n > 1) {
-			dft_real_step_d(cs + n, out + j * n, in + i, n, m);
+			dft_real_step_d(cs + n, out + j * n, in + i, n, m, 1);
 		} else {
 			out[j].re = in[i];
 			out[j].im = 0;
@@ -929,7 +876,7 @@ int fft_real_odd_s(const complex_s *cs, complex_s *out, const float *in, int siz
 		j = bit_reverse(i, bits);
 
 		if (n > 1) {
-			dft_real_step_s(cs + n, out + j * n, in + i, n, m);
+			dft_real_step_s(cs + n, out + j * n, in + i, n, m, 1);
 		} else {
 			out[j].re = in[i];
 			out[j].im = 0;
