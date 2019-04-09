@@ -8,10 +8,22 @@
 
 #define CLASS_NAME FourierTransform
 #define CAT_NAMES(a, b, c, d) a ## _ ## b ## _ ## c ## _ ## d
-#define JAVA_NAME(p, c, n) CAT_NAMES(Java_, p, c, n)
+#define JAVA_NAME(p, c, n) CAT_NAMES(Java, p, c, n)
 #define FN_NAME(method) JAVA_NAME(PACKAGE_NAME, CLASS_NAME, method)
 
-extern "C" JNIEXPORT jint JNICALL FN_NAME(fftSetup)(JNIEnv *env, jclass jc,
+extern "C" JNIEXPORT jint JNICALL FN_NAME(fftSetupS)(JNIEnv *env, jclass jc,
+    jfloatArray jce, jint size, jboolean inverse)
+{
+    float *ce  = env->GetFloatArrayElements(jce, 0);
+
+    fft_setup_s((complex_s *) ce, size, inverse);
+
+    env->ReleaseFloatArrayElements(jce, ce, 0);
+
+    return 0;
+}
+
+extern "C" JNIEXPORT jint JNICALL FN_NAME(fftSetupD)(JNIEnv *env, jclass jc,
     jdoubleArray jce, jint size, jboolean inverse)
 {
     double *ce  = env->GetDoubleArrayElements(jce, 0);
