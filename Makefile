@@ -1,14 +1,14 @@
-VERSION_MAJOR = 2
-VERSION = 2.0.0
-PROJECT_NAME=pvft
+VERSION_MAJOR = 1
+VERSION = 1.0.0
+PROJECT_NAME=vispo
 PREFIX=/usr/local
 
 LIB_NAME = lib$(PROJECT_NAME).so
 SONAME = lib$(PROJECT_NAME).so.$(VERSION_MAJOR)
 
-HEADERS = pvft.h
+HEADERS = vispo.h
 
-OBJECTS = pvft.o combine.o
+OBJECTS = dft.o fft.o alloc_pages.o combine.o
 
 TARGET_ARCH := $(shell uname -m)
 
@@ -64,6 +64,9 @@ $(LIB_NAME): $(OBJECTS)
 	$(CC) -c -o $@ $(SFLAGS) $<
 
 %.o: %.c
+	$(CC) -c -o $@ $(CFLAGS) $(LIBS) $<
+
+%.o: posix/%.c
 	$(CC) -c -o $@ $(CFLAGS) $(LIBS) $<
 
 test: test.c $(OBJECTS)
