@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_MODULE := pvft
-LOCAL_SRC_FILES := pvft-jni.cpp pvft.c
+LOCAL_SRC_FILES := vispo-jni.cpp dft.c fft.c
 LOCAL_CPP_EXTENSION := .cxx .cpp .cc
 
 # replace with your project name

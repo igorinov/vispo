@@ -24,14 +24,20 @@ typedef struct {
 extern "C" {
 #endif
 
+#define VISPO_MAX_ODD_FACTORS 20
+
 struct vispo_fft_s {
     complex_s *tables;
+    complex_s *tmpbuf;
     int n;
+    int odd_factors[VISPO_MAX_ODD_FACTORS];
 };
 
 struct vispo_fft_d {
     complex_d *tables;
+    complex_d *tmpbuf;
     int n;
+    int odd_factors[31];
 };
 
 void vispo_init(void);
@@ -57,8 +63,8 @@ int vispo_fft_complex_d(struct vispo_fft_d *fft, complex_d *out, const complex_d
 int vispo_fft_real_s(struct vispo_fft_s *fft, complex_s *out, const float *in);
 int vispo_fft_real_d(struct vispo_fft_d *fft, complex_d *out, const double *in);
 
-int vispo_dft_complex_step_s(const complex_s *w, complex_s *output, const complex_s *input, int n, int in_step);
-int vispo_dft_complex_step_d(const complex_d *w, complex_d *output, const complex_d *input, int n, int in_step);
+int vispo_dft_complex_step_s(const complex_s *w, complex_s *output, const complex_s *input, int n, int in_step, int s_step);
+int vispo_dft_complex_step_d(const complex_d *w, complex_d *output, const complex_d *input, int n, int in_step, int s_step);
 
 int vispo_dft_real_step_s(const complex_s *w, complex_s *output, const float *input, int n, int in_step, int f_step);
 int vispo_dft_real_step_d(const complex_d *w, complex_d *output, const double *input, int n, int in_step, int f_step);

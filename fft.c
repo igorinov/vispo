@@ -39,12 +39,47 @@ int vispo_fft_alloc_s(struct vispo_fft_s *fft, int n)
 
 int vispo_fft_free_d(struct vispo_fft_d *fft)
 {
-    return vispo_free_pages((void *) fft->tables, fft->n);
+    vispo_free_pages((void *) fft->tables, fft->n * 2 * sizeof(complex_d));
+
+    return 0;
 }
 
 int vispo_fft_free_s(struct vispo_fft_s *fft)
 {
-    return vispo_free_pages((void *) fft->tables, fft->n);
+    vispo_free_pages((void *) fft->tables, fft->n * 2 * sizeof(complex_s));
+
+    return 0;
+}
+
+/**
+ *  factorize() - find odd prime factors of N
+ *  Example: n = 45, factors = { 3, 3, 5 }
+ *  @factors - array of integers, at least VISP_MAX_FACTORS long
+ *  @n - number to factorize
+ *  Returns: number of factors found
+ */
+
+static int factorize(int *factors, int n)
+{
+    int d = 3;
+    int i;
+
+    for (i = 0; i < VISPO_MAX_FACTORS; i += 1)
+        factors[i] = 0;
+
+    i = 0;
+    while (d * d <= n) {
+        while (n % d == 0) {
+            factors[i++] = d;
+            n /= d;
+        }
+        d += 2;
+    }
+
+    if (n > 1)
+        factors[i++] = n;
+
+    return i;
 }
 
 /**
@@ -80,6 +115,8 @@ int vispo_fft_setup_d(struct vispo_fft_d *fft, int inverse)
 		cs[i].im = 0;
 	}
 
+    factorize(fft->odd_factors, n);
+
 	return n;
 }
 
@@ -107,6 +144,8 @@ int vispo_fft_setup_s(struct vispo_fft_s *fft, int inverse)
 		cs[i].re = 0;
 		cs[i].im = 0;
 	}
+
+    factorize(fft->odd_factors, n);
 
 	return n;
 }
@@ -283,7 +322,7 @@ static int __fft_complex_d(const complex_d *ww,
 		j = bit_reverse(i, bits);
 
 		if (l > 1) {
-			vispo_dft_complex_step_d(ww + l, out + j * l, in + i, l, m);
+			vispo_dft_complex_step_d(ww + l, out + j * l, in + i, l, m, 1);
 		} else {
 			out[j] = in[i];
 		}
@@ -298,14 +337,14 @@ int vispo_fft_complex_d(struct vispo_fft_d *fft,
     return __fft_complex_d(fft->tables, out, in, fft->n);
 }
 
-int __fft_complex_s(const complex_s *ww,
+static int __fft_complex_s(struct vispo_fft_s *fft,
     complex_s *out, const complex_s *in, int size)
 {
 	int i, j, k;
 	int bits = 0;
 	int m = 1;
 	int l = size;
-	complex_s *dft_ptr;
+    complex_s *ww = fft->tables;
 
 	/* length = l * m,  m = 2 ^ bits */
 
@@ -320,8 +359,8 @@ int __fft_complex_s(const complex_s *ww,
 	for (i = 0; i < m; i += 1) {
 		j = bit_reverse(i, bits);
 
-		if (l > 1) {
-			vispo_dft_complex_step_s(ww + l, out + j * l, in + i, l, m);
+        if (l > 1) {
+            vispo_dft_complex_step_s(ww + l, out + j * l, in + i, l, m, 1);
 		} else {
 			out[j] = in[i];
 		}
@@ -333,7 +372,7 @@ int __fft_complex_s(const complex_s *ww,
 int vispo_fft_complex_s(struct vispo_fft_s *fft,
    complex_s *out, const complex_s *in)
 {
-    return __fft_complex_s(fft->tables, out, in, fft->n);
+    return __fft_complex_s(fft, out, in, fft->n);
 }
 
 /**
@@ -364,7 +403,7 @@ int fft_complex_columns_d(const complex_d *ww,
 		j = bit_reverse(i, bits) * step;
 
 		if (l > 1) {
-			vispo_dft_complex_step_d(ww + l, out + j * l, in + i * step, l, m * step);
+			vispo_dft_complex_step_d(ww + l, out + j * l, in + i * step, l, m * step, 1);
 		} else {
 			out[j] = in[i * step];
 		}
@@ -396,7 +435,7 @@ int vispo_fft_complex_step_s(const complex_s *ww,
 		j = bit_reverse(i, bits) * step;
 
 		if (l > 1) {
-			vispo_dft_complex_step_s(ww + l, out + j * l, in + i * step, l, m * step);
+			vispo_dft_complex_step_s(ww + l, out + j * l, in + i * step, l, m * step, 1);
 		} else {
 			out[j] = in[i * step];
 		}
@@ -558,7 +597,7 @@ int vispo_fft_real_s(struct vispo_fft_s *fft,
 	 *  sig'[i].im = sig[i * 2 + 1]
 	 */
 
-	__fft_complex_s(cs, out, (const complex_s *) input, c);
+	__fft_complex_s(fft, out, (const complex_s *) input, c);
 
 	/* odd-even decomposition */
 

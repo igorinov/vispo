@@ -26,106 +26,118 @@
 
 int vispo_dft_setup_d(complex_d *s, int n, int inverse)
 {
-	double da;
-	double t;
-	int sign = inverse ? 1 : -1;
-	int c, q, i;
+    double da;
+    double t;
+    int sign = inverse ? 1 : -1;
+    int c, q, i;
 
-	if (n == 0)
-		return 0;
+    if (n == 0)
+        return 0;
 
-	da = 2 * M_PI / n;
+    da = 2 * M_PI / n;
 
-	s[0].re = 1;
-	s[0].im = 0;
+    s[0].re = 1;
+    s[0].im = 0;
 
-	if ((n & 1) == 0) {
-		c = n / 2;
-		if ((c & 1) == 0) {
-			q = c / 2;
-			for (i = 1; i < q; i += 1) {
-				t = i * da;
-				s[i].re = cos(t);
-				s[q - i].im = s[i].re * sign;
-			}
-			s[q].re = 0;
-			s[q].im = sign;
-			for (i = 1; i < q; i += 1) {
-				s[q + i].re = - s[q - i].re;
-				s[q + i].im = s[q - i].im;
-			}
-		} else {
-			for (i = 1; i < c; i += 1) {
-				t = i * da;
-				s[i].re = cos(t);
-				s[i].im = sin(t) * sign;
-			}
-		}
-		for (i = 0; i < c; i += 1) {
-			s[c + i].re = - s[i].re;
-			s[c + i].im = - s[i].im;
-		}
-	} else {
-		for (i = 1; i < n; i += 1) {
-			t = i * da;
-			s[i].re = cos(t);
-			s[i].im = sin(t) * sign;
-		}
-	}
+    if ((n & 1) == 0) {
+        c = n / 2;
+        if ((c & 1) == 0) {
+            q = c / 2;
+            for (i = 1; i < q; i += 1) {
+                t = i * da;
+                s[i].re = cos(t);
+                s[q - i].im = s[i].re * sign;
+            }
+            s[q].re = 0;
+            s[q].im = sign;
+            for (i = 1; i < q; i += 1) {
+                s[q + i].re = - s[q - i].re;
+                s[q + i].im = s[q - i].im;
+            }
+        } else {
+            for (i = 1; i < c; i += 1) {
+                t = i * da;
+                s[i].re = cos(t);
+                s[i].im = sin(t) * sign;
+            }
+        }
+        for (i = 0; i < c; i += 1) {
+            s[c + i].re = - s[i].re;
+            s[c + i].im = - s[i].im;
+        }
+    } else {
+        /* n is odd */
+        c = (n - 1) / 2;
+        for (i = 1; i <= c; i += 1) {
+            t = i * da;
+            s[i].re = cos(t);
+            s[i].im = sin(t) * sign;
+        }
+        for (i = c + 1; i < n; i += 1) {
+            s[i].re = s[n - i].re;
+            s[i].im = - s[n - i].im;
+        }
+    }
 
-	return n;
+    return n;
 }
 
 int vispo_dft_setup_s(complex_s *s, int n, int inverse)
 {
-	double da;
-	double t;
-	int sign = inverse ? 1 : -1;
-	int c, q, i;
+    double da;
+    double t;
+    int sign = inverse ? 1 : -1;
+    int c, q, i;
 
-	if (n == 0)
-		return 0;
+    if (n == 0)
+        return 0;
 
-	da = 2 * M_PI / n;
+    da = 2 * M_PI / n;
 
-	s[0].re = 1;
-	s[0].im = 0;
+    s[0].re = 1;
+    s[0].im = 0;
 
-	if ((n & 1) == 0) {
-		c = n / 2;
-		if ((c & 1) == 0) {
-			q = c / 2;
-			for (i = 1; i < q; i += 1) {
-				t = i * da;
-				s[i].re = cos(t);
-				s[q - i].im = s[i].re * sign;
-			}
-			s[q].re = 0;
-			s[q].im = sign;
-			for (i = 1; i < q; i += 1) {
-				s[q + i].re = - s[q - i].re;
-				s[q + i].im = s[q - i].im;
-			}
-		} else {
-			for (i = 1; i < c; i += 1) {
-				t = i * da;
-				s[i].re = cos(t);
-				s[i].im = sin(t) * sign;
-			}
-		}
-		for (i = 0; i < c; i += 1) {
-			s[c + i].re = - s[i].re;
-			s[c + i].im = - s[i].im;
-		}
-	} else {
-		for (i = 1; i < n; i += 1) {
-			t = i * da;
-			s[i].re = cos(t);
-			s[i].im = sin(t) * sign;
-		}
-	}
+    if ((n & 1) == 0) {
+        c = n / 2;
+        if ((c & 1) == 0) {
+            q = c / 2;
+            for (i = 1; i < q; i += 1) {
+                t = i * da;
+                s[i].re = cos(t);
+                s[q - i].im = s[i].re * sign;
+            }
+            s[q].re = 0;
+            s[q].im = sign;
+            for (i = 1; i < q; i += 1) {
+                s[q + i].re = - s[q - i].re;
+                s[q + i].im = s[q - i].im;
+            }
+        } else {
+            for (i = 1; i < c; i += 1) {
+                t = i * da;
+                s[i].re = cos(t);
+                s[i].im = sin(t) * sign;
+            }
+        }
+        for (i = 0; i < c; i += 1) {
+            s[c + i].re = - s[i].re;
+            s[c + i].im = - s[i].im;
+        }
+    } else {
+        /* n is odd */
+        c = (n - 1) / 2;
+        for (i = 1; i <= c; i += 1) {
+            t = i * da;
+            s[i].re = cos(t);
+            s[i].im = sin(t) * sign;
+        }
+        for (i = c + 1; i < n; i += 1) {
+            s[i].re = s[n - i].re;
+            s[i].im = - s[n - i].im;
+        }
+    }
 
-	return n;
+    return n;
 }
 
 /**
@@ -139,13 +151,13 @@ int vispo_dft_setup_s(complex_s *s, int n, int inverse)
 int vispo_dft_complex_s(const complex_s *cs,
     complex_s *output, const complex_s *input, int n)
 {
-	return vispo_dft_complex_step_s(cs, output, input, n, 1);
+    return vispo_dft_complex_step_s(cs, output, input, n, 1, 1);
 }
 
 int vispo_dft_complex_d(const complex_d *cs,
     complex_d *output, const complex_d *input, int n)
 {
-	return vispo_dft_complex_step_d(cs, output, input, n, 1);
+    return vispo_dft_complex_step_d(cs, output, input, n, 1, 1);
 }
 
 /**
@@ -160,166 +172,157 @@ int vispo_dft_complex_d(const complex_d *cs,
  */
 
 int vispo_dft_complex_step_d(const complex_d *s,
-    complex_d *output, const complex_d *input, int n, int in_step)
+    complex_d *output, const complex_d *input, int n, int in_step, int s_step)
 {
-	const complex_d *px, *ps;
-	double acc[4];
-	double inc[4];
-	double sum[4];
-	complex_d x;
-	int i, j, k, si;
+    const complex_d *px, *ps;
+    double acc[4];
+    double inc[4];
+    double sum[4];
+    complex_d x;
+    int i, j, k, si;
+    int s_end = n * s_step;
 
-	/* DC component */
+    /* DC component */
 
-	px = input;
-	acc[0] = Re(*px);
-	acc[1] = Im(*px);
-	inc[0] = 0;
-	inc[1] = 0;
-	for (i = 1; i < n; i += 1) {
-		px += in_step;
-		inc[0] += Re(*px);
-		inc[1] += Im(*px);
-		for (j = 0; j < 2; j += 1) {
-			sum[j] = acc[j] + inc[j];
-			inc[j] -= (sum[j] - acc[j]);
-			acc[j] = sum[j];
-		}
-	}
-	output[0].re = acc[0];
-	output[0].im = acc[1];
+    px = input;
+    acc[0] = Re(*px);
+    acc[1] = Im(*px);
+    inc[0] = 0;
+    inc[1] = 0;
+    for (i = 1; i < n; i += 1) {
+        px += in_step;
+        inc[0] += Re(*px);
+        inc[1] += Im(*px);
+        for (j = 0; j < 2; j += 1) {
+            sum[j] = acc[j] + inc[j];
+            inc[j] -= (sum[j] - acc[j]);
+            acc[j] = sum[j];
+        }
+    }
+    output[0].re = acc[0];
+    output[0].im = acc[1];
 
-	for (k = 1; k < n; k += 1) {
-		px = input;
-		acc[0] = Re(*px);
-		acc[1] = Im(*px);
-		acc[2] = 0;
-		acc[3] = 0;
+    for (k = 1; k < n; k += 1) {
+        px = input;
+        acc[0] = Re(*px);
+        acc[1] = Im(*px);
+        acc[2] = 0;
+        acc[3] = 0;
 
-		for (j = 0; j < 4; j += 1)
-			inc[j] = 0;
+        for (j = 0; j < 4; j += 1)
+            inc[j] = 0;
 
-        	si = k;
-		for (i = 1; i < n; i += 1) {
-			px += in_step;
-			ps = s + si;
-			x = *px;
+            si = k * s_step;
+        for (i = 1; i < n; i += 1) {
+            px += in_step;
+            ps = s + si;
+            x = *px;
 
-#ifdef USE_FMA
-			inc[0] = fma(Re(*ps), Re(x), inc[0]);
-			inc[1] = fma(Re(*ps), Im(x), inc[1]);
-			inc[2] = fma(Im(*ps), Re(x), inc[2]);
-			inc[3] = fma(Im(*ps), Im(x), inc[3]);
-#else
-			inc[0] += Re(*ps) * Re(x);
-			inc[1] += Re(*ps) * Im(x);
-			inc[2] += Im(*ps) * Re(x);
-			inc[3] += Im(*ps) * Im(x);
-#endif
-			/* this should be vectorized by SIMD-enabled compiler */
+            inc[0] += Re(*ps) * Re(x);
+            inc[1] += Re(*ps) * Im(x);
+            inc[2] += Im(*ps) * Re(x);
+            inc[3] += Im(*ps) * Im(x);
 
-			for (j = 0; j < 4; j += 1)
-				sum[j] = acc[j] + inc[j];
+            /* this should be vectorized by SIMD-enabled compiler */
 
-			for (j = 0; j < 4; j += 1)
-				inc[j] -= (sum[j] - acc[j]);
+            for (j = 0; j < 4; j += 1)
+                sum[j] = acc[j] + inc[j];
 
-			for (j = 0; j < 4; j += 1)
-				acc[j] = sum[j];
+            for (j = 0; j < 4; j += 1)
+                inc[j] -= (sum[j] - acc[j]);
 
-			/*
-			 * si = (i * k) % n
-			 */
-			si += k;
-			if (si >= n)
-				si -= n;
-		}
-		output[k].re = (acc[0] - acc[3]) + (inc[0] - inc[3]);
-		output[k].im = (acc[1] + acc[2]) + (inc[1] + inc[2]);
-	}
+            for (j = 0; j < 4; j += 1)
+                acc[j] = sum[j];
 
-	return k;
+            /*
+             * si = (i * k) % n
+             */
+            si += k * s_step;
+            if (si >= s_end)
+                si -= s_end;
+        }
+        output[k].re = (acc[0] - acc[3]) + (inc[0] - inc[3]);
+        output[k].im = (acc[1] + acc[2]) + (inc[1] + inc[2]);
+    }
+
+    return k;
 }
 
 int vispo_dft_complex_step_s(const complex_s *s,
-    complex_s *output, const complex_s *input, int n, int in_step)
+    complex_s *output, const complex_s *input, int n, int in_step, int s_step)
 {
-	const complex_s *px, *ps;
-	float acc[4];
-	float inc[4];
-	float sum[4];
-	complex_s x;
-	int i, j, k, si;
+    const complex_s *px, *ps;
+    float acc[4];
+    float inc[4];
+    float sum[4];
+    complex_s x;
+    int i, j, k, si;
+    int s_end = n * s_step;
 
-	/* DC component */
+    /* DC component */
 
-	px = input;
-	acc[0] = Re(*px);
-	acc[1] = Im(*px);
-	inc[0] = 0;
-	inc[1] = 0;
-	for (i = 1; i < n; i += 1) {
-		px += in_step;
-		inc[0] += Re(*px);
-		inc[1] += Im(*px);
-		for (j = 0; j < 2; j += 1) {
-			sum[j] = acc[j] + inc[j];
-			inc[j] -= (sum[j] - acc[j]);
-			acc[j] = sum[j];
-		}
-	}
-	output[0].re = acc[0];
-	output[0].im = acc[1];
+    px = input;
+    acc[0] = Re(*px);
+    acc[1] = Im(*px);
+    inc[0] = 0;
+    inc[1] = 0;
+    for (i = 1; i < n; i += 1) {
+        px += in_step;
+        inc[0] += Re(*px);
+        inc[1] += Im(*px);
+        for (j = 0; j < 2; j += 1) {
+            sum[j] = acc[j] + inc[j];
+            inc[j] -= (sum[j] - acc[j]);
+            acc[j] = sum[j];
+        }
+    }
+    output[0].re = acc[0];
+    output[0].im = acc[1];
 
-	for (k = 1; k < n; k += 1) {
-		px = input;
-		acc[0] = Re(*px);
-		acc[1] = Im(*px);
-		acc[2] = 0;
-		acc[3] = 0;
+    for (k = 1; k < n; k += 1) {
+        px = input;
+        acc[0] = Re(*px);
+        acc[1] = Im(*px);
+        acc[2] = 0;
+        acc[3] = 0;
 
-		for (j = 0; j < 4; j += 1)
-			inc[j] = 0;
-        	si = k;
-		for (i = 1; i < n; i += 1) {
-			px += in_step;
-			ps = s + si;
-			x = *px;
+        for (j = 0; j < 4; j += 1)
+            inc[j] = 0;
 
-#ifdef USE_FMA
-			inc[0] = fma(Re(*ps), Re(x), inc[0]);
-			inc[1] = fma(Re(*ps), Im(x), inc[1]);
-			inc[2] = fma(Im(*ps), Re(x), inc[2]);
-			inc[3] = fma(Im(*ps), Im(x), inc[3]);
-#else
-			inc[0] += Re(*ps) * Re(x);
-			inc[1] += Re(*ps) * Im(x);
-			inc[2] += Im(*ps) * Re(x);
-			inc[3] += Im(*ps) * Im(x);
-#endif
-			/* this should be vectorized by SIMD-enabled compiler */
+        si = k * s_step;
+        for (i = 1; i < n; i += 1) {
+            px += in_step;
+            ps = s + si;
+            x = *px;
 
-			for (j = 0; j < 4; j += 1)
-				sum[j] = acc[j] + inc[j];
+            inc[0] += Re(*ps) * Re(x);
+            inc[1] += Re(*ps) * Im(x);
+            inc[2] += Im(*ps) * Re(x);
+            inc[3] += Im(*ps) * Im(x);
 
-			for (j = 0; j < 4; j += 1)
-				inc[j] -= (sum[j] - acc[j]);
+            /* this should be vectorized by SIMD-enabled compiler */
 
-			for (j = 0; j < 4; j += 1)
-				acc[j] = sum[j];
+            for (j = 0; j < 4; j += 1)
+                sum[j] = acc[j] + inc[j];
 
-			/*
-			 * si = (i * k) % n
-			 */
-			si += k;
-			if (si >= n)
-				si -= n;
-		}
-		output[k].re = (acc[0] - acc[3]) + (inc[0] - inc[3]);
-		output[k].im = (acc[1] + acc[2]) + (inc[1] + inc[2]);
-	}
+            for (j = 0; j < 4; j += 1)
+                inc[j] -= (sum[j] - acc[j]);
 
-	return k;
+            for (j = 0; j < 4; j += 1)
+                acc[j] = sum[j];
+
+            /*
+             * si = (i * k) % n
+             */
+            si += k * s_step;
+            if (si >= s_end)
+                si -= s_end;
+        }
+        output[k].re = (acc[0] - acc[3]) + (inc[0] - inc[3]);
+        output[k].im = (acc[1] + acc[2]) + (inc[1] + inc[2]);
+    }
+
+    return k;
 }
 
 /**
@@ -335,154 +338,146 @@ int vispo_dft_complex_step_s(const complex_s *s,
 int vispo_dft_real_step_d(const complex_d *s,
     complex_d *output, const double *input, int n, int in_step, int f_step)
 {
-	const complex_d *ps;
-	const double *pt;
-	double acc[2];
-	double inc[2];
-	double sum[2];
-	double x, y;
-	int i, j, k, si, ss;
-	int s_end = n * f_step;
+    const complex_d *ps;
+    const double *pt;
+    double acc[2];
+    double inc[2];
+    double sum[2];
+    double x, y;
+    int i, j, k, si, ss;
+    int s_end = n * f_step;
 
-	/* DC component */
+    /* DC component */
 
-	pt = input;
-	acc[0] = *pt;
-	inc[0] = 0;
-	for (i = 1; i < n; i += 1) {
-		pt += in_step;
-		inc[0] += *pt;
-		sum[0] = acc[0] + inc[0];
-		inc[0] -= (sum[0] - acc[0]);
-		acc[0] = sum[0];
-	}
-	output[0].re = acc[0];
-	output[0].im = 0;
+    pt = input;
+    acc[0] = *pt;
+    inc[0] = 0;
+    for (i = 1; i < n; i += 1) {
+        pt += in_step;
+        inc[0] += *pt;
+        sum[0] = acc[0] + inc[0];
+        inc[0] -= (sum[0] - acc[0]);
+        acc[0] = sum[0];
+    }
+    output[0].re = acc[0];
+    output[0].im = 0;
 
-	ss = 0;
-	for (k = 1; k < n; k += 1) {
-		ss += f_step;
-		pt = input;
-		acc[0] = *pt;
-		acc[1] = 0;
-		inc[0] = 0;
-		inc[1] = 0;
+    ss = 0;
+    for (k = 1; k < n; k += 1) {
+        ss += f_step;
+        pt = input;
+        acc[0] = *pt;
+        acc[1] = 0;
+        inc[0] = 0;
+        inc[1] = 0;
 
-		for (j = 0; j < 2; j += 1)
-			inc[j] = 0;
+        for (j = 0; j < 2; j += 1)
+            inc[j] = 0;
 
-        	si = ss;
-		for (i = 1; i < n; i += 1) {
-			pt += in_step;
-			ps = s + si;
-			x = *pt;
+        si = ss;
+        for (i = 1; i < n; i += 1) {
+            pt += in_step;
+            ps = s + si;
+            x = *pt;
 
-#ifdef USE_FMA
-			inc[0] = fma(Re(*ps), x, inc[0]);
-			inc[1] = fma(Im(*ps), x, inc[1]);
-#else
-			inc[0] += x * Re(*ps);
-			inc[1] += x * Im(*ps);
-#endif
-			/* this should be vectorized by SIMD-enabled compiler */
+            inc[0] += x * Re(*ps);
+            inc[1] += x * Im(*ps);
 
-			for (j = 0; j < 2; j += 1)
-				sum[j] = acc[j] + inc[j];
+            /* this should be vectorized by SIMD-enabled compiler */
 
-			for (j = 0; j < 2; j += 1)
-				inc[j] -= (sum[j] - acc[j]);
+            for (j = 0; j < 2; j += 1)
+                sum[j] = acc[j] + inc[j];
 
-			for (j = 0; j < 2; j += 1)
-				acc[j] = sum[j];
+            for (j = 0; j < 2; j += 1)
+                inc[j] -= (sum[j] - acc[j]);
 
-			/*
-			 * si = (i * k) % n
-			 */
-			si += ss;
-			if (si >= s_end)
-				si -= s_end;
-		}
-		output[k].re = acc[0];
-		output[k].im = acc[1];
-	}
+            for (j = 0; j < 2; j += 1)
+                acc[j] = sum[j];
 
-	return k;
+            /*
+             * si = (i * k) % n
+             */
+            si += ss;
+            if (si >= s_end)
+                si -= s_end;
+        }
+        output[k].re = acc[0];
+        output[k].im = acc[1];
+    }
+
+    return k;
 }
 
 int vispo_dft_real_step_s(const complex_s *s,
     complex_s *output, const float *input, int n, int in_step, int f_step)
 {
-	const complex_s *ps;
-	const float *pt;
-	float acc[2];
-	float inc[2];
-	float sum[2];
-	float x, y;
-	int i, j, k, si, ss;
-	int s_end = n * f_step;
+    const complex_s *ps;
+    const float *pt;
+    float acc[2];
+    float inc[2];
+    float sum[2];
+    float x, y;
+    int i, j, k, si, ss;
+    int s_end = n * f_step;
 
-	/* DC component */
+    /* DC component */
 
-	pt = input;
-	acc[0] = *pt;
-	inc[0] = 0;
-	for (i = 1; i < n; i += 1) {
-		pt += in_step;
-		inc[0] += *pt;
-		sum[0] = acc[0] + inc[0];
-		inc[0] -= (sum[0] - acc[0]);
-		acc[0] = sum[0];
-	}
-	output[0].re = acc[0];
-	output[0].im = 0;
+    pt = input;
+    acc[0] = *pt;
+    inc[0] = 0;
+    for (i = 1; i < n; i += 1) {
+        pt += in_step;
+        inc[0] += *pt;
+        sum[0] = acc[0] + inc[0];
+        inc[0] -= (sum[0] - acc[0]);
+        acc[0] = sum[0];
+    }
+    output[0].re = acc[0];
+    output[0].im = 0;
 
-	ss = 0;
-	for (k = 1; k < n; k += 1) {
-		ss += f_step;
-		pt = input;
-		acc[0] = *pt;
-		acc[1] = 0;
-		inc[0] = 0;
-		inc[1] = 0;
+    ss = 0;
+    for (k = 1; k < n; k += 1) {
+        ss += f_step;
+        pt = input;
+        acc[0] = *pt;
+        acc[1] = 0;
+        inc[0] = 0;
+        inc[1] = 0;
 
-		for (j = 0; j < 2; j += 1)
-			inc[j] = 0;
+        for (j = 0; j < 2; j += 1)
+            inc[j] = 0;
 
-        	si = ss;
-		for (i = 1; i < n; i += 1) {
-			pt += in_step;
-			ps = s + si;
-			x = *pt;
+            si = ss;
+        for (i = 1; i < n; i += 1) {
+            pt += in_step;
+            ps = s + si;
+            x = *pt;
 
-#ifdef USE_FMA
-			inc[0] = fma(ps->re, x, inc[0]);
-			inc[1] = fma(ps->im, x, inc[1]);
-#else
-			inc[0] += x * ps->re;
-			inc[1] += x * ps->im;
-#endif
-			/* this should be vectorized by SIMD-enabled compiler */
+            inc[0] += x * ps->re;
+            inc[1] += x * ps->im;
 
-			for (j = 0; j < 2; j += 1)
-				sum[j] = acc[j] + inc[j];
+            /* this should be vectorized by SIMD-enabled compiler */
 
-			for (j = 0; j < 2; j += 1)
-				inc[j] -= (sum[j] - acc[j]);
+            for (j = 0; j < 2; j += 1)
+                sum[j] = acc[j] + inc[j];
 
-			for (j = 0; j < 2; j += 1)
-				acc[j] = sum[j];
+            for (j = 0; j < 2; j += 1)
+                inc[j] -= (sum[j] - acc[j]);
 
-			/*
-			 * si = (i * k) % n
-			 */
-			si += ss;
-			if (si >= s_end)
-				si -= s_end;
-		}
-		output[k].re = acc[0];
-		output[k].im = acc[1];
-	}
+            for (j = 0; j < 2; j += 1)
+                acc[j] = sum[j];
 
-	return k;
+            /*
+             * si = (i * k) % n
+             */
+            si += ss;
+            if (si >= s_end)
+                si -= s_end;
+        }
+        output[k].re = acc[0];
+        output[k].im = acc[1];
+    }
+
+    return k;
 }
 

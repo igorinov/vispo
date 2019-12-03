@@ -12,7 +12,7 @@ OBJECTS = dft.o fft.o alloc_pages.o combine.o
 
 TARGET_ARCH := $(shell uname -m)
 
-CFLAGS = -fPIC -O2
+CFLAGS = -fPIC -O2 -g
 
 ifeq ($(TARGET_ARCH),armeabi-v7a)
 #OBJECTS += combine.o

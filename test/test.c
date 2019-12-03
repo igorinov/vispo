@@ -176,7 +176,16 @@ int real_test_d(short *filedata, int m, int n, int show)
     int err;
 
     err = vispo_fft_alloc_d(&forward, n);
+    if (err) {
+        printf("Error allocating %d complex double\n", n);
+        return err;
+    }
+
     err = vispo_fft_alloc_d(&inverse, n);
+    if (err) {
+        printf("Error allocating %d complex double\n", n);
+        return err;
+    }
 
     vispo_fft_setup_d(&forward, 0);
     vispo_fft_setup_d(&inverse, 1);
@@ -351,6 +360,7 @@ int main(int argc, char **argv)
     int m, n;
     int i, k, c;
     long l;
+    int err;
 /*
     vispo_init();
 */
@@ -397,8 +407,18 @@ int main(int argc, char **argv)
         eps_d = log(n) / (log(2) * 256);
         eps_s = log(n) / log(2);
 
-        vispo_fft_alloc_d(&forward_d, n);
-        vispo_fft_alloc_d(&inverse_d, n);
+        err = vispo_fft_alloc_d(&forward_d, n);
+        if (err) {
+            printf("Error allocating %d complex double\n", n);
+            return err;
+        }
+
+        err = vispo_fft_alloc_d(&inverse_d, n);
+        if (err) {
+            printf("Error allocating %d complex double\n", n);
+            return err;
+        }
+
         vispo_fft_setup_d(&forward_d, 0);
         vispo_fft_setup_d(&inverse_d, 1);
 
