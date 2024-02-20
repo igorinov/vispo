@@ -64,7 +64,7 @@ static int factorize(int *factors, int n)
     int d = 3;
     int i;
 
-    for (i = 0; i < VISPO_MAX_FACTORS; i += 1)
+    for (i = 0; i < VISPO_MAX_ODD_FACTORS; i += 1)
         factors[i] = 0;
 
     i = 0;
